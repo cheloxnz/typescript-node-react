@@ -1,4 +1,4 @@
-import express, { Response, Request } from 'express';
+import express, { Response, Request, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import passport from 'passport';
@@ -8,7 +8,7 @@ import session from 'express-session';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import User from './User';
-import { UserInterface } from './interfaces/UserInterface';
+import { UserInterface, DatabaseUserInterface } from './interfaces/UserInterface';
 
 const LocalStrategy = passportLocal.Strategy;
 
@@ -61,13 +61,13 @@ passport.use(
 );
 
 // serializer user
-passport.serializeUser((user: any, cb) => {
+passport.serializeUser((user: DatabaseUserInterface, cb) => {
 	cb(null, user._id);
 });
 
 // deserializer user
 passport.deserializeUser((id: string, cb) => {
-	User.findOne({ _id: id }, (err, user: any) => {
+	User.findOne({ _id: id }, (err, user: DatabaseUserInterface) => {
 		const userInformation = {
 			username: user.username,
 			isAdmin: user.isAdmin,
@@ -81,10 +81,10 @@ app.post('/register', async (req: Request, res: Response) => {
 	// user, password
 	const { username, password } = req?.body;
 	if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
-		res.send('Inproper values');
+		res.send('Improper values');
 		return;
 	}
-	User.findOne({ username }, async (err: Error, doc: UserInterface) => {
+	User.findOne({ username }, async (err: Error, doc: DatabaseUserInterface) => {
 		if (err) throw err;
 		if (doc) res.send('User already exists');
 		// if there is no document, we create one
@@ -100,16 +100,58 @@ app.post('/register', async (req: Request, res: Response) => {
 	});
 });
 
+const isAdministratorMiddleware = (req: Request, res: Response, next: NextFunction) => {
+	const { user }: any = req;
+	if (user) {
+		User.findOne({ username: user.username }, (err, doc: DatabaseUserInterface) => {
+			if (err) throw err;
+			if (doc?.isAdmin) {
+				next();
+			} else {
+				res.send("Sorry, only admin's can perform this.");
+			}
+		});
+	} else {
+		res.send('Sorry, you arent logged in.');
+	}
+};
+
 // local authentication method
-app.post(
-	'/login',
-	passport.authenticate('local', (req, res) => {
-		res.send('Successfully Authenticate');
-	})
-);
+app.post('/login', passport.authenticate('local'), (req, res) => {
+	res.send('success');
+});
 
 app.get('/user', (req, res) => {
 	res.send(req.user);
+});
+
+app.get('/logout', (req, res) => {
+	req.logout();
+	res.send('success');
+});
+
+app.post('/deleteuser', isAdministratorMiddleware, async (req, res) => {
+	const { id } = req?.body;
+	await User.findByIdAndDelete(id, (err) => {
+		if (err) throw err;
+	});
+	res.send('success');
+});
+
+app.get('/getallusers', isAdministratorMiddleware, async (req, res) => {
+	await User.find({}, (err, data: DatabaseUserInterface[]) => {
+		if (err) throw err;
+		const filteredUsers: UserInterface[] = [];
+		data.forEach((item: DatabaseUserInterface) => {
+			const userInformation = {
+				id: item._id,
+				username: item.username,
+				isAdmin: item.isAdmin,
+			};
+			filteredUsers.push(userInformation);
+		});
+		res.send(filteredUsers);
+	});
 });
 
 // server initializated

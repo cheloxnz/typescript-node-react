@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import axios, { AxiosResponse } from 'axios';
 
-export default function Login() {
+export default function Register() {
 	const [username, setUsername] = useState<string>('');
 	const [password, setPassword] = useState<string>('');
 
-	const login = () => {
+	const register = () => {
 		axios
 			.post(
-				'http://localhost:4000/login',
+				'http://localhost:4000/register',
 				{
 					username,
 					password,
@@ -17,24 +17,19 @@ export default function Login() {
 					withCredentials: true,
 				}
 			)
-			.then(
-				(res: AxiosResponse) => {
-					if (res.data === 'success') {
-						window.location.href = '/';
-					}
-				},
-				() => {
-					console.log('Failure');
+			.then((res: AxiosResponse) => {
+				if (res.data === 'success') {
+					window.location.href = '/login';
 				}
-			);
+			});
 	};
 
 	return (
 		<div>
-			<h1>Login</h1>
+			<h1>Register</h1>
 			<input type="text" placeholder="username" onChange={(e) => setUsername(e.target.value)} />
 			<input type="text" placeholder="password" onChange={(e) => setPassword(e.target.value)} />
-			<button onClick={login}>Login</button>
+			<button onClick={register}>Login</button>
 		</div>
 	);
 }
