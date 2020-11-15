@@ -14,7 +14,7 @@ const LocalStrategy = passportLocal.Strategy;
 
 // connect to db
 mongoose.connect(
-	'mongodb+srv://cheloxnz:cabj1212@cluster0.6ielk.mongodb.net/<dbname>?retryWrites=true&w=majority',
+	'mongodb+srv://DATABASE',
 	{
 		useCreateIndex: true,
 		useNewUrlParser: true,
